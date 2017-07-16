@@ -20,6 +20,8 @@ def get_discount_games(exclude=None):
 
     max_price = float(os.environ[env_vars['price_threshold']].replace(",", "."))
     min_discount = int(float(os.environ[env_vars['discount_threshold']].replace(",", ".")))
+    if exclude is None:
+        exclude = []
 
     try:
         user_profile = profiles.get_user_profile(os.environ[env_vars['steam_user']])
@@ -44,12 +46,13 @@ def get_discount_games(exclude=None):
             }
             tokens = g['link'].split('/')
             g['gameid'] = tokens[len(tokens) - 1]
-            if g['finalPrice'] <= max_price:
-                if g['originalPrice'] <= max_price:
-                    if g['discount'] >= min_discount:
+            if g['gameid'] not in exclude:
+                if g['finalPrice'] <= max_price:
+                    if g['originalPrice'] <= max_price:
+                        if g['discount'] >= min_discount:
+                            discount_games.append(g)
+                    else:
                         discount_games.append(g)
-                else:
-                    discount_games.append(g)
 
     return discount_games
 
