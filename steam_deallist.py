@@ -58,13 +58,18 @@ def get_discount_games(exclude=None):
 
     return discount_games
 
+def get_game_desc(game):
+    if game is not None:
+        return "{}: original price = {}€, discount price = {}€, discount amount = {}%, store page = {}".format(game['name'], game['originalPrice'], game['finalPrice'], game['discount'], game['link'])
+
 def print_game_list(games):
     if games is None or len(games) <= 0:
         print("No games in list")
     else:
+        ret = ""
         for g in games:
-            print("{}: original price = {}€, discount price = {}€, discount amount = {}%, store page = {}".format(g['name'], g['originalPrice'], g['finalPrice'], g['discount'], g['link']))
-
+            ret += get_game_desc(g)
+        return ret
 
 if __name__ == '__main__':
      print_game_list(get_discount_games())
