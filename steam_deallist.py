@@ -22,6 +22,8 @@ def get_discount_games(exclude=None):
     min_discount = int(float(os.environ[env_vars['discount_threshold']].replace(",", ".")))
     if exclude is None:
         exclude = []
+    if type(exclude) == str:
+        exclude = [exclude]
 
     try:
         user_profile = profiles.get_user_profile(os.environ[env_vars['steam_user']])
