@@ -5,6 +5,8 @@ from steamwebapi import profiles
 from bs4 import BeautifulSoup
 import urllib.request
 
+steam_locale = 'it'
+
 env_vars = {
     'api_key' : 'STEAM_API_KEY',
     'steam_user' : 'STEAM_USER',
@@ -32,7 +34,7 @@ def get_discount_games(exclude=None):
 
     """Retrieves all appids for games on a user's wishlist (scrapes it, no API call available)."""
     url = "http://steamcommunity.com/profiles/{}/wishlist".format(user_profile.steamid)
-    request = urllib.request.Request(url, headers={'Accept-Language':'it', 'Content-Language':'it'})
+    request = urllib.request.Request(url, headers={'Accept-Language':steam_locale, 'Content-Language':steam_locale})
     with urllib.request.urlopen(request) as response:
         page = response.read()
     soup = BeautifulSoup(page, "lxml")
