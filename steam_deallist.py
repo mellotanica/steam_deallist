@@ -32,7 +32,10 @@ def get_discount_games(exclude=None):
 
     """Retrieves all appids for games on a user's wishlist (scrapes it, no API call available)."""
     url = "http://steamcommunity.com/profiles/{}/wishlist".format(user_profile.steamid)
-    soup = BeautifulSoup(urllib.request.urlopen(url), "lxml")
+    request = urllib.request.Request(url, headers={'Accept-Language':'it', 'Content-Language':'it'})
+    with urllib.request.urlopen(request) as response:
+        page = response.read()
+    soup = BeautifulSoup(page, "lxml")
     wish_games = soup.findAll("div", "wishlistRowItem")
 
     discount_games = []
@@ -72,4 +75,4 @@ def print_game_list(games):
         return ret
 
 if __name__ == '__main__':
-     print_game_list(get_discount_games())
+     print(print_game_list(get_discount_games()))
