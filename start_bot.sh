@@ -4,6 +4,7 @@ CONFIG_DIR="$HOME/.config/steam_dealbot"
 CONFIG_FILE="$CONFIG_DIR/steam_dealbot_config.sh"
 TEMPLATE_FILE="$(dirname "${BASH_SOURCE[0]}")/template_config.sh"
 EXCLUDES_FILE="$CONFIG_DIR/excludes"
+DB_FILE="$CONFIG_DIR/latest_deals"
 
 if test ! -d "$CONFIG_DIR" -o ! -x "$CONFIG_FILE"; then
 	if test ! -d "$CONFIG_DIR"; then
@@ -57,6 +58,6 @@ while test -n "$UNSETVARS"; do
 done
 
 source "$CONFIG_FILE"
-touch "$EXCLUDES_FILE"
+#touch "$EXCLUDES_FILE" "$DB_FILE"
 
-python3 "$(dirname "${BASH_SOURCE[0]}")"/steam_dealbot.py "$EXCLUDES_FILE"
+python3 "$(dirname "${BASH_SOURCE[0]}")"/steam_dealbot.py "$EXCLUDES_FILE" "$DB_FILE"

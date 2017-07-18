@@ -22,15 +22,16 @@ for var in env_vars.values():
         print(var+" environment variable missing!\nplease run bot using start_bot.sh")
         exit(1)
 
-if len(sys.argv) != 2:
+if len(sys.argv) != 3:
     print("wrong arguments\nplease run bot using start_bot.sh")
     exit(1)
 
 exclude_file = sys.argv[1]
+db_file = sys.argv[2]
 
-if not os.path.isfile(exclude_file):
-    print("{} is not a valid file\nplease run bot using start_bot.sh")
-    exit(1)
+#if not os.path.isfile(exclude_file):
+#    print("{} is not a valid file\nplease run bot using start_bot.sh".format(exclude_file))
+#    exit(1)
 
 telegram_token = os.environ[env_vars['telegram_token']]
 dest_id = int(os.environ[env_vars['user_id']])
@@ -59,34 +60,47 @@ def comm_deals(bot, update):
     if update.message.chat_id == dest_id:
         print("serving deals request")
         bot.send_message(chat_id=dest_id, text="Searching for deals...")
-        send_deals(bot, steam_deallist.get_discount_games())
+        out_file = None
+        if not os.path.isfile(db_file):
+            out_file = db_file
+        send_deals(bot, steam_deallist.get_discount_games(in_file=db_file, out_file=out_file))
 
 def job_deals(bot, job):
+    print("updating local cache")
+    all_games = steam_deallist.get_discount_games(out_file=db_file)
+
     excludes = None
     if os.path.isfile(exclude_file):
         ef = open(exclude_file, 'r')
         exclude_lines = ef.readlines()
         ef.close()
-        excludes = []
+        excludes = {}
         for e in exclude_lines:
-            excludes.append(e[:-1])
-    games = steam_deallist.get_discount_games(excludes)
+            ev = e[:-1].split(" ")
+            if len(ev) < 2:
+                excludes[ev[0]] = 0
+            else:
+                excludes[ev[0]] = float(ev[1])
+
+    games = []
+    for g in all_games:
+        if excludes is not None and g['gameid'] in excludes.keys() and g['finalPrice'] == excludes[g['gameid']]:
+            continue
+        games.append(g)
 
     if excludes is None:
         om = 'x'
-        excludes = []
+        excludes = {}
     else:
         om = 'w'
 
-    print("daily update start, excluded games: {}, got {} new deals".format(len(excludes), len(games)))
-    if games is not None:
-        if len(games) > 0:
+    print("daily update start, excluded games: {}, got {} new deals".format(len(excludes.keys()), len(games)))
+    if games is not None and len(games) > 0:
             send_deals(bot, games)
 
     excludes = []
-    all_games = steam_deallist.get_discount_games()
     for g in all_games:
-        excludes.append(g['gameid']+"\n")
+        excludes.append("{} {}\n".format(g['gameid'], g['finalPrice']))
 
     print("updating excluded games, total excluded ids: {}".format(len(excludes)))
 
@@ -98,7 +112,7 @@ def job_deals(bot, job):
 
 def comm_stats(bot, update):
     if update.message.chat_id == dest_id:
-        stats = "bot status:\n" + steam_deallist.get_stats()
+        stats = "bot status:\n" + steam_deallist.get_stats(db_file)
         stats += "\n"
         if update_time is None:
             stats += "no auto updates"
@@ -192,7 +206,7 @@ def conv_custom_apply(bot, update, user_data):
 # interaction 4
 def conv_custom_perform(bot, update, user_data):
     bot.send_message(chat_id=dest_id, reply_markup=ReplyKeyboardRemove(), text="Searching for deals...")
-    send_deals(bot, steam_deallist.get_discount_games(max_price=user_data['price'], low_price_discount=user_data['price_discount'], min_discount=user_data['discount']))
+    send_deals(bot, steam_deallist.get_discount_games(max_price=user_data['price'], low_price_discount=user_data['price_discount'], min_discount=user_data['discount'], in_file=db_file))
     return ConversationHandler.END
 
 def conv_cancel(bot, update):
@@ -212,6 +226,7 @@ def conv_custom_start(bot, update, user_data):
 
 dispatcher.add_handler(CommandHandler("deals", comm_deals))
 dispatcher.add_handler(CommandHandler("stats", comm_stats))
+
 
 dispatcher.add_handler(ConversationHandler(entry_points=[CommandHandler("custom", conv_custom_start, pass_user_data=True)], fallbacks=[CommandHandler("cancel", conv_cancel)], states={
         0: [MessageHandler(Filters.text, conv_custom_default, pass_user_data=True)],
