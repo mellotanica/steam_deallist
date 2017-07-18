@@ -111,20 +111,19 @@ def comm_stats(bot, update):
 custom_markup = [["Modify parameter"], ["Get results"], ["Cancel"]]
 
 # interaction 0
-def conv_custom_default(bot, update, user_data):
+def conv_custom_default(bot, update, user_data, message=""):
     global custom_markup
 
-    message = "Min discount: {}%\nMax price: {}€\nMin discount for low price games: {}%\nWhat do you want to do?".format(user_data['discount'], user_data['price'], user_data['price_discount'])
+    message += "Min discount: {}%\nMax price: {}€\nMin discount for low price games: {}%\nWhat do you want to do?".format(user_data['discount'], user_data['price'], user_data['price_discount'])
     bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_markup), text=message)
 
     return 1
 
-custom_set_markup = [["Price"], ["Low price Discount"], ["Discount"]]
+custom_set_markup = [["Price"], ["Low price Discount"], ["Discount"], ["Cancel"]]
 
 
 # interaction 1
 def conv_custom_default_answer(bot, update, user_data):
-    global custom_markup
     global custom_set_markup
 
     if update.message.text == "Modify parameter":
@@ -136,8 +135,7 @@ def conv_custom_default_answer(bot, update, user_data):
     elif update.message.text == "Cancel":
         return conv_cancel(bot, update)
 
-    bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_markup), text="Unknown choiche, what do you want to do?")
-    return 1
+    return conv_custom_default(bot, update, user_data, "Unknown choice.\n\n")
 
 # interaction 2
 def conv_custom_set(bot, update, user_data):
@@ -155,18 +153,26 @@ def conv_custom_set(bot, update, user_data):
     elif update.message.text == "Discount":
         current_val = str(user_data['discount'])+"%"
         user_data['current_param'] = 'discount'
+    elif update.message.text == "Cancel":
+        return conv_custom_default(bot, update, user_data, "Operation caceled.\n\n")
     else:
         ret = 2
 
     if current_val is None:
         bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_set_markup), text="Unknown choiche, what do you want to modify?")
     else:
-        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(), text="Current value: {}, specify new value".format(current_val))
+        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup([["Cancel"]]), text="Current value: {}, specify new value".format(current_val))
     return ret
 
 # interaction 3
 def conv_custom_apply(bot, update, user_data):
+    global custom_set_markup
     val = None
+
+    if update.message.text == "Cancel":
+        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_set_markup), text="Which parameter do you want to set?")
+        user_data['current_param'] = None
+        return 2
 
     try:
         val = float(update.message.text.replace(",", "."))
@@ -176,7 +182,7 @@ def conv_custom_apply(bot, update, user_data):
         val = None
 
     if val is None:
-        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(), text="Unknown value, specify new value")
+        bot.send_message(chat_id=update.message.chat_id, text="Unknown value, specify new value")
         return 3
 
     user_data[user_data['current_param']] = val
