@@ -58,6 +58,5 @@ while test -n "$UNSETVARS"; do
 done
 
 source "$CONFIG_FILE"
-#touch "$EXCLUDES_FILE" "$DB_FILE"
 
 python3 "$(dirname "${BASH_SOURCE[0]}")"/steam_dealbot.py "$EXCLUDES_FILE" "$DB_FILE"
