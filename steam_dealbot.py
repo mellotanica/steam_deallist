@@ -35,6 +35,7 @@ telegram_token = os.environ[env_vars['telegram_token']]
 dest_id = int(os.environ[env_vars['user_id']])
 update_h = int(os.environ[env_vars['update_h']])
 update_m = int(os.environ[env_vars['update_m']])
+
 update_time = None
 if update_h >= 0 and update_h < 24 and update_m >= 0 and update_m < 60:
     update_time = datetime.time(update_h, update_m)
@@ -94,10 +95,21 @@ def job_deals(bot, job):
 
     print("daily update done")
 
+def comm_stats(bot, update):
+    if update.message.chat_id == dest_id:
+        stats = "bot status:\n" + steam_deallist.get_stats()
+        stats += "\n"
+        if update_time is None:
+            stats += "no auto updates"
+        else:
+            stats += "update time = {}".format(update_time)
+        print("stats:\n"+stats)
+        bot.send_message(chat_id=dest_id, text=stats)
 
 #register telegram callbacks
 
 dispatcher.add_handler(CommandHandler("deals", comm_deals))
+dispatcher.add_handler(CommandHandler("stats", comm_stats))
 
 if update_time is not None:
     updater.job_queue.run_daily(job_deals, update_time)

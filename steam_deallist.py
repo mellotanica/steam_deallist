@@ -71,5 +71,13 @@ def print_game_list(games):
         for g in games:
             print(format_game_info(g))
 
+def get_stats():
+    user = os.environ[env_vars['steam_user']]
+    max_price = float(os.environ[env_vars['price_threshold']].replace(",", "."))
+    low_price_discount = int(float(os.environ[env_vars['low_price_discount_threshold']].replace(",", ".")))
+    min_discount = int(float(os.environ[env_vars['discount_threshold']].replace(",", ".")))
+
+    return "user = {}\nmax_price = {}\nlow_price_discount = {}\n,min_discount = {}".format(user, max_price, low_price_discount, min_discount)
+
 if __name__ == '__main__':
      print_game_list(get_discount_games())
