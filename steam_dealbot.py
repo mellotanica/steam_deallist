@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
+from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup
 import logging
 import os, sys
 import steam_deallist
@@ -106,10 +107,113 @@ def comm_stats(bot, update):
         print("stats:\n"+stats)
         bot.send_message(chat_id=dest_id, text=stats)
 
+
+custom_markup = [["Modify parameter"], ["Get results"], ["Cancel"]]
+
+# interaction 0
+def conv_custom_default(bot, update, user_data):
+    global custom_markup
+
+    message = "Min discount: {}%\nMax price: {}€\nMin discount for low price games: {}%\nWhat do you want to do?".format(user_data['discount'], user_data['price'], user_data['price_discount'])
+    bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_markup), text=message)
+
+    return 1
+
+custom_set_markup = [["Price"], ["Low price Discount"], ["Discount"]]
+
+
+# interaction 1
+def conv_custom_default_answer(bot, update, user_data):
+    global custom_markup
+    global custom_set_markup
+
+    if update.message.text == "Modify parameter":
+        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_set_markup), text="Which parameter do you want to set?")
+        user_data['current_param'] = None
+        return 2
+    elif update.message.text == "Get results":
+        return conv_custom_perform(bot, update, user_data)
+    elif update.message.text == "Cancel":
+        return conv_cancel(bot, update)
+
+    bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_markup), text="Unknown choiche, what do you want to do?")
+    return 1
+
+# interaction 2
+def conv_custom_set(bot, update, user_data):
+    global custom_set_markup
+    
+    current_val = None
+    ret = 3
+
+    if update.message.text == "Price":
+        current_val = str(user_data['price'])+"€"
+        user_data['current_param'] = 'price'
+    elif update.message.text == "Low price Discount":
+        current_val = str(user_data['price_discount'])+"%"
+        user_data['current_param'] = 'price_discount'
+    elif update.message.text == "Discount":
+        current_val = str(user_data['discount'])+"%"
+        user_data['current_param'] = 'discount'
+    else:
+        ret = 2
+
+    if current_val is None:
+        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(custom_set_markup), text="Unknown choiche, what do you want to modify?")
+    else:
+        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(), text="Current value: {}, specify new value".format(current_val))
+    return ret
+
+# interaction 3
+def conv_custom_apply(bot, update, user_data):
+    val = None
+
+    try:
+        val = float(update.message.text.replace(",", "."))
+        if user_data['current_param'] != 'price':
+            val = int(val)
+    except:
+        val = None
+
+    if val is None:
+        bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(), text="Unknown value, specify new value")
+        return 3
+
+    user_data[user_data['current_param']] = val
+
+    return conv_custom_default(bot, update, user_data)
+
+# interaction 4
+def conv_custom_perform(bot, update, user_data):
+    bot.send_message(chat_id=dest_id, reply_markup=ReplyKeyboardRemove(), text="Searching for deals...")
+    send_deals(bot, steam_deallist.get_discount_games(max_price=user_data['price'], low_price_discount=user_data['price_discount'], min_discount=user_data['discount']))
+    return ConversationHandler.END
+
+def conv_cancel(bot, update):
+    update.message.reply_text('Operation canceled', reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
+
+def conv_custom_start(bot, update, user_data):
+    if update.message.chat_id == dest_id:
+        
+        user_data['price'] = float(os.environ[steam_deallist.env_vars['price_threshold']].replace(",", "."))
+        user_data['price_discount'] = int(float(os.environ[steam_deallist.env_vars['low_price_discount_threshold']].replace(",", ".")))
+        user_data['discount'] = int(float(os.environ[steam_deallist.env_vars['discount_threshold']].replace(",", ".")))
+
+        return conv_custom_default(bot, update, user_data)
+
 #register telegram callbacks
 
 dispatcher.add_handler(CommandHandler("deals", comm_deals))
 dispatcher.add_handler(CommandHandler("stats", comm_stats))
+
+dispatcher.add_handler(ConversationHandler(entry_points=[CommandHandler("custom", conv_custom_start, pass_user_data=True)], fallbacks=[CommandHandler("cancel", conv_cancel)], states={
+        0: [MessageHandler(Filters.text, conv_custom_default, pass_user_data=True)],
+        1: [MessageHandler(Filters.text, conv_custom_default_answer, pass_user_data=True)],
+        2: [MessageHandler(Filters.text, conv_custom_set, pass_user_data=True)],
+        3: [MessageHandler(Filters.text, conv_custom_apply, pass_user_data=True)],
+        4: [MessageHandler(Filters.text, conv_custom_perform, pass_user_data=True)]
+    }))
 
 if update_time is not None:
     updater.job_queue.run_daily(job_deals, update_time)

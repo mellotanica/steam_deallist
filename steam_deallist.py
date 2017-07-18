@@ -13,15 +13,20 @@ env_vars = {
     'discount_threshold'            : 'STEAM_MIN_DISCOUNT'
 }
 
-def get_discount_games(exclude=None):
+def get_discount_games(exclude=None, max_price=None, low_price_discount=None, min_discount=None):
     for var in env_vars.values():
         if var not in os.environ:
             print(var+" environment variable missing!")
             exit(1)
 
-    max_price = float(os.environ[env_vars['price_threshold']].replace(",", "."))
-    low_price_discount = int(float(os.environ[env_vars['low_price_discount_threshold']].replace(",", ".")))
-    min_discount = int(float(os.environ[env_vars['discount_threshold']].replace(",", ".")))
+    if max_price is None:
+        max_price = float(os.environ[env_vars['price_threshold']].replace(",", "."))
+
+    if low_price_discount is None:
+        low_price_discount = int(float(os.environ[env_vars['low_price_discount_threshold']].replace(",", ".")))
+
+    if min_discount is None:
+        min_discount = int(float(os.environ[env_vars['discount_threshold']].replace(",", ".")))
 
     if exclude is None:
         exclude = []
