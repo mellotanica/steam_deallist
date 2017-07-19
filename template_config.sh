@@ -5,9 +5,6 @@ export STEAM_TELEGRAM_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 # to get your telegram user id see: https://telegram.me/userinfobot
 export STEAM_TELEGRAM_USER_ID="XXXXXXXX"
 
-# steam store api key, get one here: http://steamcommunity.com/dev/apikey
-export STEAM_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-
 # steam user whose wishlist is to be watched
 export STEAM_USER="XXXXXXXX"
 
