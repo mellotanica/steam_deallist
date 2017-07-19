@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import os, re
-from steamwebapi import profiles
 from bs4 import BeautifulSoup
 import urllib.request
 
 env_vars = {
-    'api_key'                       : 'STEAM_API_KEY',
     'steam_user'                    : 'STEAM_USER',
     'price_threshold'               : 'STEAM_MAX_PRICE',
     'low_price_discount_threshold'  : 'STEAM_LOW_PRICE_DISCOUNT',
@@ -66,13 +64,7 @@ def get_discount_games(exclude=None, max_price=None, low_price_discount=None, mi
     discount_games = []
 
     if in_file is None or not os.path.isfile(in_file):
-        try:
-            user_profile = profiles.get_user_profile(os.environ[env_vars['steam_user']])
-        except:
-            print("invalid user reference "+os.environ[env_vars['steam_user']])
-
-        """Retrieves all appids for games on a user's wishlist (scrapes it, no API call available)."""
-        url = "http://steamcommunity.com/profiles/{}/wishlist".format(user_profile.steamid)
+        url = "http://steamcommunity.com/id/{}/wishlist".format(os.environ[env_vars['steam_user']])
         soup = BeautifulSoup(urllib.request.urlopen(url), "lxml")
         wish_games = soup.findAll("div", "wishlistRowItem")
 
