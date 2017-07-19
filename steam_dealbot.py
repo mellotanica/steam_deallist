@@ -122,6 +122,11 @@ def comm_stats(bot, update):
         bot.send_message(chat_id=dest_id, text=stats)
 
 
+def comm_update(bot, update):
+    update_message = bot.send_message(chat_id=update.message.chat_id, text="Updating local cache...")
+    steam_deallist.get_discount_games(out_file=db_file)
+    bot.edit_message_text("Local cache updated", chat_id=update.message.chat_id, message_id=update_message.message_id)
+
 custom_markup = [["Modify parameter"], ["Get results"], ["Cancel"]]
 
 # interaction 0
@@ -226,7 +231,7 @@ def conv_custom_start(bot, update, user_data):
 
 dispatcher.add_handler(CommandHandler("deals", comm_deals))
 dispatcher.add_handler(CommandHandler("stats", comm_stats))
-
+dispatcher.add_handler(CommandHandler("update", comm_update))
 
 dispatcher.add_handler(ConversationHandler(entry_points=[CommandHandler("custom", conv_custom_start, pass_user_data=True)], fallbacks=[CommandHandler("cancel", conv_cancel)], states={
         0: [MessageHandler(Filters.text, conv_custom_default, pass_user_data=True)],
