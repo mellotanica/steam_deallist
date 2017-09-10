@@ -33,13 +33,19 @@ class Game:
 
 
     def __str__(self):
+        recommend = False
         str = "{}".format(self.name)
         str += "\nprice: {}€ ({}€ - {}%)".format(self.price, self.original_price, self.cut)
         if self.deal is not None:
-            str += "\nLowest prices: current {}, all time {}".format(self.deal.current, self.deal.historical)
+            if self.deal.current.price == self.deal.historical.price:
+                if self.deal.current.shop['id'] == 'steam':
+                    recommend = True
+                str += "\nLowest price: {}".format(self.deal.current)
+            else:
+                str += "\nLowest prices: current {}, all time {}".format(self.deal.current, self.deal.historical)
         str += "\nStore page: {}".format(self.link)
-        # if self.recommended:
-        #     str += "\nBuy it now!"
+        if recommend:
+            str += "\n💸💸💸Go buy it now!💸💸💸"
         return str
 
     def to_dict(self):
