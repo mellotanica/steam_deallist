@@ -20,3 +20,7 @@ export STEAM_LOW_PRICE_DISCOUNT=XX
 # auto updates time of day (set to -1 to disable automatic updates)
 export STEAM_UPDATES_HOUR=XX
 export STEAM_UPDATES_MINUTE=XX
+
+# isthereanydeal api key (optional), get one here: https://isthereanydeal.com/apps/new/
+export ISTHEREANYDEAL_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
