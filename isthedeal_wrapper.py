@@ -30,19 +30,25 @@ class PriceDeal:
     def __str__(self):
         return "{}{} ({}%) on {}".format(self.price, self.region['currency'], self.cut, self.shop['name'])
 
-    def to_json(self):
-        return json.dumps({
+    def to_dict(self):
+        return {
             'shop': self.shop,
             'region': self.region,
             'price': self.price,
             'cut': self.cut
-        })
+        }
+
+    def from_dict(ddata):
+        return PriceDeal(ddata['shop'], ddata['region'], ddata['price'], ddata['cut'])
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     def from_json(jdata):
         if jdata is None:
             return None
-        j = json.loads(jdata)
-        return PriceDeal(j['shop'], j['region'], j['price'], j['cut'])
+        return PriceDeal.from_dict(json.loads(jdata))
+
 
 class Deal:
     def __init__(self, game_id, game_plain, current, historical, country):
@@ -58,20 +64,25 @@ class Deal:
     def __str__(self):
         return "{}: {}\nCurrent: {}\nHistorical: {}".format(self.game_id, self.game_plain, self.current, self.historical)
 
-    def to_json(self):
-        return json.dumps({
+    def to_dict(self):
+        return {
             'game_id': self.game_id,
             'game_plain': self.game_plain,
             'current_j': self.current_j,
             'historical_j': self.historical_j,
             'country': self.country
-        })
+        }
+
+    def from_dict(ddata):
+        return Deal(ddata['game_id'], ddata['game_plain'], ddata['current_j'], ddata['historical_j'], ddata['country'])
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     def from_json(jdata):
         if jdata is None:
             return None
-        j = json.loads(jdata)
-        return Deal(j['game_id'], j['game_plain'], j['current_j'], j['historical_j'], j['country'])
+        return Deal.from_dict(json.loads(jdata))
 
 
 def require_json(url):

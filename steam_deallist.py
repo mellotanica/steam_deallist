@@ -42,33 +42,39 @@ class Game:
         #     str += "\nBuy it now!"
         return str
 
-    def to_json(self):
-        deal = None
-        if self.deal is not None:
-            deal = self.deal.to_json()
-        return json.loads({
+    def to_dict(self):
+        d = {
             'game_id': self.gid,
             'original_price': self.original_price,
             'price': self.price,
             'cut': self.cut,
             'link': self.link,
-            'name': self.name,
-            'deal': deal
-        })
+            'name': self.name
+        }
+        if self.deal is not None:
+            d['deal'] = self.deal.to_dict()
+        else:
+            d['deal'] = None
+        return d
+
+    def from_dict(ddata):
+        return Game(
+            ddata['game_id'],
+            ddata['original_price'],
+            ddata['price'],
+            ddata['cut'],
+            ddata['link'],
+            ddata['name'],
+            Deal.from_dict(ddata['deal'])
+        )
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     def from_json(jdata):
         if jdata is None:
             return None
-        j = json.loads(jdata)
-        return Game(
-            j['game_id'],
-            j['original_price'],
-            j['price'],
-            j['cut'],
-            j['link'],
-            j['name'],
-            Deal.from_json(j['deal'])
-        )
+        return json.loads(jdata)
 
 
 def __is_game_applicable(g, max_price, low_price_discount, min_discount, exclude):
@@ -86,12 +92,13 @@ def __is_game_applicable(g, max_price, low_price_discount, min_discount, exclude
 
 def parse_in_file(in_file):
     inf = open(in_file, 'r')
-    in_strings = inf.readlines()
+    jdata = inf.read()
     inf.close()
 
+    jobj = json.loads(jdata)
     glist = {}
-    for l in in_strings:
-        g = Game.from_json(l)
+    for j in jobj:
+        g = Game.from_dict(j)
         glist[g.gid] = g
 
     return glist
@@ -150,16 +157,14 @@ def get_discount_games(exclude=None, max_price=None, low_price_discount=None, mi
         discount_games = parse_in_file(in_file)
 
     if out_file is not None:
-        out_strings = []
-        for g in discount_games.values():
-            out_strings.append(g.to_json())
+        out_dicts = [g.to_dict() for g in discount_games.values()]
 
         if os.path.isfile(out_file):
             mode = "w"
         else:
             mode = "x"
         of = open(out_file, mode)
-        of.writelines(out_strings)
+        of.write(json.dumps(out_dicts))
         of.close()
 
     applicable_games = []
