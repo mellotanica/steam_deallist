@@ -54,7 +54,7 @@ def send_deals(bot, games):
         bot.send_message(chat_id=dest_id, text="No deals available right now")
     else:
         for g in games:
-            bot.send_message(chat_id=dest_id, text=steam_deallist.format_game_info(g))
+            bot.send_message(chat_id=dest_id, text=str(g))
 
 def comm_deals(bot, update):
     if update.message.chat_id == dest_id:
