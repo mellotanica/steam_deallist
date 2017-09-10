@@ -58,6 +58,8 @@ class Game:
         return d
 
     def from_dict(ddata):
+        if ddata is None:
+            return None
         return Game(
             ddata['game_id'],
             ddata['original_price'],

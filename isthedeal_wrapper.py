@@ -39,6 +39,8 @@ class PriceDeal:
         }
 
     def from_dict(ddata):
+        if ddata is None:
+            return None
         return PriceDeal(ddata['shop'], ddata['region'], ddata['price'], ddata['cut'])
 
     def to_json(self):
@@ -74,6 +76,8 @@ class Deal:
         }
 
     def from_dict(ddata):
+        if ddata is None:
+            return None
         return Deal(ddata['game_id'], ddata['game_plain'], ddata['current_j'], ddata['historical_j'], ddata['country'])
 
     def to_json(self):
