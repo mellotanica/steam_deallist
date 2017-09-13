@@ -1,9 +1,11 @@
-import urllib3, json
+import urllib3
+import json
 
 urllib3.disable_warnings()
 http = urllib3.PoolManager()
 
 regions = {}
+
 
 class PriceDeal:
     def __init__(self, shop, region, price, cut):
@@ -12,6 +14,7 @@ class PriceDeal:
         self.price = price
         self.cut = cut
 
+    @staticmethod
     def from_deal(deal_j, region):
         price = None
         if 'price_new' in deal_j:
@@ -38,18 +41,11 @@ class PriceDeal:
             'cut': self.cut
         }
 
+    @staticmethod
     def from_dict(ddata):
         if ddata is None:
             return None
         return PriceDeal(ddata['shop'], ddata['region'], ddata['price'], ddata['cut'])
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
-
-    def from_json(jdata):
-        if jdata is None:
-            return None
-        return PriceDeal.from_dict(json.loads(jdata))
 
 
 class Deal:
@@ -64,7 +60,10 @@ class Deal:
         self.historical = PriceDeal.from_deal(historical, region)
 
     def __str__(self):
-        return "{}: {}\nCurrent: {}\nHistorical: {}".format(self.game_id, self.game_plain, self.current, self.historical)
+        return "{}: {}\nCurrent: {}\nHistorical: {}".format(self.game_id,
+                                                            self.game_plain,
+                                                            self.current,
+                                                            self.historical)
 
     def to_dict(self):
         return {
@@ -75,18 +74,11 @@ class Deal:
             'country': self.country
         }
 
+    @staticmethod
     def from_dict(ddata):
         if ddata is None:
             return None
         return Deal(ddata['game_id'], ddata['game_plain'], ddata['current_j'], ddata['historical_j'], ddata['country'])
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
-
-    def from_json(jdata):
-        if jdata is None:
-            return None
-        return Deal.from_dict(json.loads(jdata))
 
 
 def require_json(url):
@@ -142,16 +134,18 @@ def get_multiple_plain_by_ids(api_key, id_list, shop='steam'):
     return None
 
 
-def __get_lowest(api_key, plains, shop='steam', country='IT'):
+def __get_lowest(api_key, plains, country='IT'):
     region = get_region_by_country(country)['region']
 
-    current_url = 'https://api.isthereanydeal.com/v01/game/prices/{}/?key={}&plains={}&country={}'.format(region, api_key, plains, country)
-    historical_url = 'https://api.isthereanydeal.com/v01/game/lowest/{}/?key={}&plains={}'.format(region, api_key, plains)
+    current_url = 'https://api.isthereanydeal.com/v01/game/prices/{}/?key={}&plains={}&country={}'.format(
+        region, api_key, plains, country)
+    historical_url = 'https://api.isthereanydeal.com/v01/game/lowest/{}/?key={}&plains={}'.format(
+        region, api_key, plains)
 
     current_j = require_json(current_url)
     historical_j = require_json(historical_url)
 
-    return (current_j['data'], historical_j['data'])
+    return current_j['data'], historical_j['data']
 
 
 def get_game_lowest_prices(api_key, game_id, shop='steam', country='IT'):
@@ -159,11 +153,12 @@ def get_game_lowest_prices(api_key, game_id, shop='steam', country='IT'):
     if plain is None:
         return None
 
-    cur_j, hist_j = __get_lowest(api_key, plain, shop, country)
+    cur_j, hist_j = __get_lowest(api_key, plain, country)
 
     return Deal(game_id, plain, cur_j[plain], hist_j[plain], country)
 
-#returns a Deal list
+
+# returns a Deal list
 def get_multiple_games_lowest_prices(api_key, id_list, shop='steam', country='IT'):
     plains_map = get_multiple_plain_by_ids(api_key, id_list, shop)
     if plains_map is None:
@@ -171,13 +166,12 @@ def get_multiple_games_lowest_prices(api_key, id_list, shop='steam', country='IT
 
     plains_list = ",".join(plains_map.values())
 
-    cur_j, hist_j = __get_lowest(api_key, plains_list, shop, country)
+    cur_j, hist_j = __get_lowest(api_key, plains_list, country)
 
     dl = []
-    for id in id_list:
-        if id in plains_map:
-            pl = plains_map[id]
+    for gid in id_list:
+        if gid in plains_map:
+            pl = plains_map[gid]
             if pl in cur_j and pl in hist_j:
-                dl.append(Deal(id, pl, cur_j[pl], hist_j[pl], country))
+                dl.append(Deal(gid, pl, cur_j[pl], hist_j[pl], country))
     return dl
-
