@@ -113,7 +113,8 @@ def conv_start_start(bot, update, user_data):
                 "you can also ask me to list all your applicable /deals," \
                 "perform custom queries on your wishlist deals with /custom command,  " \
                 "/update deals information, change /settings or show you some /stats." \
-                "(Remember that your steam wishlist must be public for me to read it!)"
+                "(Remember that your steam wishlist must be public for me to read it!)" \
+		"\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist"
 
     user_data['ud'] = ud
     bot.send_message(chat_id=update.message.chat_id, text=text)
@@ -139,7 +140,8 @@ def conv_start_confirm(bot, update, user_data):
         text = "All right {}, I will notify you every day if new deals are released, " \
                "you can also ask me to list all your applicable /deals," \
                "perform custom queries on your wishlist deals with /custom command,  " \
-               "/update deals information, change /settings or show you some /stats.".format(ud.username)
+               "/update deals information, change /settings or show you some /stats." \
+	       "\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist".format(ud.username)
         um = bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(),
                               text="Initializing cache..⏳")
         comm_update(bot, update, ud, False)
