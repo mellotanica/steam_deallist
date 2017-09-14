@@ -6,14 +6,14 @@ You can also run custom queries on current deals list.
 
 The wishlist scraper is provided as a library allowing for custom use cases
 
+Additional market information is provided by [IsThereAnyDeal](https://isthereanydeal.com/).
+
 # Requirements
 To run the bot or the scraper you will need Python3 (>= 3.4), also the following python libraries:
 
-```
-beautyfulsoup4
-lxml
-python-telegram-bot
-```
+- [beautyfulsoup4](https://www.crummy.com/software/BeautifulSoup/)
+- [lxml](http://lxml.de/)
+- [python-telegram-bot](https://python-telegram-bot.org/)
 
 If you installed python-pip you can get the needed packages running
 `pip3 install -r requirements.txt`
@@ -69,4 +69,3 @@ The game map has the following keys:
 Other two service functions are provided:
 - `def format_game_info(game)`: takes a game map and returns a formatted string describing the game and it's discount state
 - `def print_game_list(games)`: takes a game map list and prints all its contents in a human readable way
-
