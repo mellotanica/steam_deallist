@@ -5,6 +5,17 @@ CONFIG_FILE="$CONFIG_DIR/steam_dealbot_config.sh"
 TEMPLATE_FILE="$(dirname "${BASH_SOURCE[0]}")/template_config.sh"
 CACHE_DIR="$HOME/.local/steam_dealbot"
 
+# Try to execute a `return` statement,
+# but do it in a sub-shell and catch the results.
+# If this script isn't sourced, that will raise an error.
+$(return >/dev/null 2>&1)
+if [ "$?" -eq "0" ]
+then
+	source "$CONFIG_FILE"
+	return
+fi
+
+
 if test ! -d "$CONFIG_DIR" -o ! -x "$CONFIG_FILE"; then
 	if test ! -d "$CONFIG_DIR"; then
 		mkdir -p "$CONFIG_DIR"
