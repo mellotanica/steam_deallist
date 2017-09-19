@@ -94,6 +94,53 @@ def comm_update(bot, update, user_data=None, send_message=True):
         return update_message
 
 
+def comm_all_deals(bot, update):
+    global user_data_manager
+    user_data = user_data_manager.get_userdata(update.message.chat_id)
+
+    if user_data is None:
+        bot.send_message(chat_id=update.message.chat_id, text="Account not configured! Please, issue /start command")
+        return
+
+    send_deals(bot, update.message.chat_id, user_data.cache)
+
+
+def comm_help(bot, update):
+    global user_data_manager
+    user_data = user_data_manager.get_userdata(update.message.chat_id)
+
+    if user_data is None:
+        bot.send_message(chat_id=update.message.chat_id, text="Account not configured! Please, issue /start command")
+        return
+
+    text = "## Available commands ##\n" \
+	   "  - /deals \n" \
+	   "       get all deals that respect the active settings\n" \
+	   "  - /settings \n" \
+	   "       review and change settings (see below)\n" \
+	   "  - /custom \n" \
+	   "       perform a query on your wishlist with temporary settings\n" \
+	   "  - /alldeals \n" \
+	   "       list every game in your wishlist currently on sale\n" \
+	   "  - /help \n" \
+	   "       show this help text\n" \
+	   "  - /start \n" \
+	   "       show start message\n" \
+	   "  - /update \n" \
+	   "       trigger an update of the local cache\n" \
+	   "  - /stats \n" \
+	   "       show some statistics on your account\n" \
+	   "\n\n" \
+	   "## Settings ##\n" \
+	   "The current deal list is filtered applying two thresholds:\n" \
+	   "  - 'Max Price': maximum price accepted\n" \
+	   "  - 'Min Discount': minimum discount percentage accepted\n" \
+	   "Deals are filtered excluding games that don't respect both the two thresholds, "\
+	   "for the ones that have an original price that is already below the price "\
+	   "threshold, the 'Low Price Discount' threshold is checked against discount percentage.\n" \
+
+    bot.send_message(chat_id=update.message.chat_id, text=text)
+
 # #### CONVERSATIONS ####
 
 # start conversation
@@ -110,9 +157,10 @@ def conv_start_start(bot, update, user_data):
         ud = user_data_manager.init_userdata(update.message.chat_id)
     else:
         text += "I will notify you every day if new deals are released, " \
-                "you can also ask me to list all your applicable /deals," \
+                "you can also ask me to list all your applicable /deals (or /alldeals regardless of your settings)," \
                 "perform custom queries on your wishlist deals with /custom command,  " \
-                "/update deals information, change /settings or show you some /stats." \
+                "/update deals information, change /settings or show you some /stats. " \
+	        "I can provide you more info if you aske me for /help. " \
                 "(Remember that your steam wishlist must be public for me to read it!)" \
 		"\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist"
 
@@ -138,9 +186,10 @@ def conv_start_confirm(bot, update, user_data):
     if repl in 'yes':
         ud = user_data['ud']
         text = "All right {}, I will notify you every day if new deals are released, " \
-               "you can also ask me to list all your applicable /deals," \
+               "you can also ask me to list all your applicable /deals (or /alldeals regardless of your settings)," \
                "perform custom queries on your wishlist deals with /custom command,  " \
-               "/update deals information, change /settings or show you some /stats." \
+               "/update deals information, change /settings or show you some /stats. " \
+	       "I can provide you more info if you aske me for /help. " \
 	       "\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist".format(ud.username)
         um = bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(),
                               text="Initializing cache..⏳")
@@ -442,6 +491,8 @@ dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler("deals", comm_deals))
 dispatcher.add_handler(CommandHandler("stats", comm_stats))
 dispatcher.add_handler(CommandHandler("update", comm_update))
+dispatcher.add_handler(CommandHandler("alldeals", comm_all_deals))
+dispatcher.add_handler(CommandHandler("help", comm_help))
 
 dispatcher.add_handler(
     ConversationHandler(entry_points=[CommandHandler("start", conv_start_start, pass_user_data=True)],
