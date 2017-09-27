@@ -1,11 +1,13 @@
 import urllib3
 import json
+import logging
 
 urllib3.disable_warnings()
 http = urllib3.PoolManager()
 
 regions = {}
 
+__multiple_api_limit = 25
 
 class PriceDeal:
     def __init__(self, shop, region, price, cut):
@@ -86,7 +88,7 @@ def require_json(url):
     if request.status == 200:
         return json.loads(request.data.decode('utf-8'))
     else:
-        print("bad request: {}".format(request.status))
+        logging.error("bad request: {}".format(request.status))
         return None
 
 
@@ -105,7 +107,7 @@ def get_region_by_country(country):
     if region is not None:
         regions[country] = region
     else:
-        print("invalid country {}".format(country))
+        logging.error("invalid country {}".format(country))
     return region
 
 
@@ -116,21 +118,30 @@ def get_game_plain_by_id(apy_key, game_id, shop='steam'):
     if j is not None and 'plain' in j['data']:
         return j['data']['plain']
     else:
-        print("plain not found for game {}".format(game_id))
+        logging.error("plain not found for game {}".format(game_id))
     return None
 
 
 # returns a {game_id: game_plain} dictionary
 def get_multiple_plain_by_ids(api_key, id_list, shop='steam'):
-    if type(id_list) is list:
-        id_list = ",".join(id_list)
-    url = 'https://api.isthereanydeal.com/v01/game/plain/id/?key={}&shop={}&ids={}'.format(api_key, shop, id_list)
+    if type(id_list) is str:
+        id_list = id_list.split(',')
+	
+    out = {}
+    while len(id_list) > 0:
+        s_list = ",".join(id_list[:__multiple_api_limit])
+        id_list = id_list[__multiple_api_limit:]
+    
+        url = 'https://api.isthereanydeal.com/v01/game/plain/id/?key={}&shop={}&ids={}'.format(api_key, shop, s_list)
 
-    j = require_json(url)
-    if j is not None:
-        return j['data']
-    else:
-        print("no plain found for game id list: {}".format(id_list))
+        j = require_json(url)
+        if j is not None:
+            out.update(j['data'])
+        else:
+            logging.warning("no plain found for ids: {}".format(s_list))
+
+    if len(out) > 0:
+        return out
     return None
 
 
@@ -164,14 +175,33 @@ def get_multiple_games_lowest_prices(api_key, id_list, shop='steam', country='IT
     if plains_map is None:
         return None
 
-    plains_list = ",".join(plains_map.values())
-
-    cur_j, hist_j = __get_lowest(api_key, plains_list, country)
+    plains_list = [p for p in plains_map.values()]
 
     dl = []
-    for gid in id_list:
-        if gid in plains_map:
-            pl = plains_map[gid]
-            if pl in cur_j and pl in hist_j:
-                dl.append(Deal(gid, pl, cur_j[pl], hist_j[pl], country))
+    while len(plains_list) > 0:
+        p_list = ",".join(plains_list[:__multiple_api_limit])
+        plains_list = plains_list[__multiple_api_limit:]
+
+        cur_j, hist_j = __get_lowest(api_key, p_list, country)
+
+        for gid in id_list:
+            if gid in plains_map:
+                pl = plains_map[gid]
+                if pl in cur_j and pl in hist_j:
+                    dl.append(Deal(gid, pl, cur_j[pl], hist_j[pl], country))
+            else:
+                logging.warning("gid {} was not resolved".format(gid))
+
+    for i in id_list:
+        found = False
+        for d in dl:
+            if d.game_id == i:
+                found = True
+                break
+        if not found:
+            if i in plains_map:
+                logging.warning("{} ({}) not found".format(plains_map[i], i))
+            else:
+                logging.warning("{} not found".format(i))
+
     return dl

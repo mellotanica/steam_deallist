@@ -12,16 +12,16 @@ import os
 # check needed env vars and arguments before declaring functions
 for var in env_vars.values():
     if var not in os.environ:
-        print(var + " environment variable missing!\nplease run bot using start_bot.sh")
+        logging.critical(var + " environment variable missing!\nplease run bot using start_bot.sh")
         exit(1)
 
 if len(sys.argv) != 2:
-    print("wrong arguments\nplease run bot using start_bot.sh")
+    logging.critical("wrong arguments\nplease run bot using start_bot.sh")
     exit(2)
 
 cache_dir = sys.argv[1]
 if not os.path.isdir(cache_dir):
-    print("{} is not a valid directory\nplease run bot using start_bot.sh")
+    logging.critical("{} is not a valid directory\nplease run bot using start_bot.sh")
     exit(2)
 
 
@@ -55,7 +55,7 @@ def comm_deals(bot, update):
     try:
         send_deals(bot, user_data.tid, steam_deallist.get_discount_games(user_data))
     except TelegramError as e:
-        print(e)
+        logging.error(e)
 
 
 
@@ -442,7 +442,7 @@ def conv_cancel(bot, update):
 def job_deals(bot, job):
     global cache_dir, user_data_manager
 
-    print("updating local caches")
+    logging.info("updating local caches")
 
     for f in os.scandir(cache_dir):
         if f.is_file():
@@ -453,7 +453,7 @@ def job_deals(bot, job):
             if tid is not None:
                 ud = user_data_manager.get_userdata(tid)
                 if ud is not None:
-                    print("updating cache for tid {}, user {}".format(ud.tid, ud.username))
+                    logging.info("updating cache for tid {}, user {}".format(ud.tid, ud.username))
 
                     ud.cache = steam_deallist.get_updated_user_cache(ud)
 
@@ -464,7 +464,7 @@ def job_deals(bot, job):
                     ud.set_exclude_cache()
                     user_data_manager.store_userdata(ud)
 
-    print("daily update done")
+    logging.info("daily update done")
 
 
 # #### BOT INITIALIZATION ####
@@ -479,9 +479,9 @@ update_time = None
 if 0 <= update_h < 24 and 0 <= update_m < 60:
     update_time = datetime.time(update_h, update_m)
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-print("logger initialized")
+logging.info("logger initialized")
 
 updater = Updater(token=telegram_token)
 dispatcher = updater.dispatcher
@@ -522,11 +522,11 @@ if update_time is not None:
     updater.job_queue.run_daily(job_deals, update_time)
 
 if update_time is not None:
-    print("will send updates each day at {}".format(update_time))
+    logging.info("will send updates each day at {}".format(update_time))
 
 # #### RUN BOT ####
 
-print("telegram bot initalized, starting")
+logging.info("telegram bot initalized, starting")
 
 updater.start_polling()
 
