@@ -10,6 +10,8 @@ optional_vars = {
     'isthereanydeal_api_key': 'ISTHEREANYDEAL_API_KEY'
 }
 
+def __sanitize_price_string(price):
+    return price.replace(",",".").replace("-", "0")
 
 def __is_game_applicable(g, max_price, low_price_discount, min_discount, exclude):
     if g.gid not in exclude:
@@ -36,9 +38,9 @@ def get_updated_user_cache(user_data):
 
     for game in wish_games:
         if game.find("div", "discount_final_price") is not None:
-            original_price = float(game.find("div", "discount_original_price").text[:-1].replace(",", "."))
-            final_price = float(game.find("div", "discount_final_price").text[:-1].replace(",", "."))
-            cut = int(float(game.find("div", "discount_pct").text[1:-1].replace(",", ".")))
+            original_price = float(__sanitize_price_string(game.find("div", "discount_original_price").text[:-1]))
+            final_price = float(__sanitize_price_string(game.find("div", "discount_final_price").text[:-1]))
+            cut = int(float(__sanitize_price_string(game.find("div", "discount_pct").text[1:-1])))
             name = game.find("h4", "ellipsis").text
             link = game.find("a", "storepage_btn_alt")['href']
             tokens = link.split('/')
