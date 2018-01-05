@@ -58,7 +58,10 @@ class Deal:
         self.historical_j = historical
         self.country = country
         region = get_region_by_country(country)
-        self.current = PriceDeal.from_deal(current['list'][0], region)
+        if 'list' in current.keys() and len(current['list']) > 0:
+                self.current = PriceDeal.from_deal(current['list'][0], region)
+        else:
+                self.current = None
         self.historical = PriceDeal.from_deal(historical, region)
 
     def __str__(self):

@@ -73,7 +73,9 @@ class Game:
 
     def is_recommended(self):
         if type(self.deal) is Deal:
-            if self.deal.current.price == self.deal.historical.price:
+            if self.price <= self.deal.historical.price:
+                return True
+            if self.deal.current.price <= self.deal.historical.price:
                 if self.deal.current.shop['id'] == 'steam':
                     return True
         return False
