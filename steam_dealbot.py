@@ -8,6 +8,7 @@ env_vars = {
 
 import sys
 import os
+import logging
 
 # check needed env vars and arguments before declaring functions
 for var in env_vars.values():
@@ -27,7 +28,6 @@ if not os.path.isdir(cache_dir):
 
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, TelegramError
-import logging
 import steam_deallist
 import datetime
 from userdata import UserDataManager
@@ -56,7 +56,6 @@ def comm_deals(bot, update):
         send_deals(bot, user_data.tid, steam_deallist.get_discount_games(user_data))
     except TelegramError as e:
         logging.error(e)
-
 
 
 def comm_stats(bot, update):
@@ -114,32 +113,33 @@ def comm_help(bot, update):
         return
 
     text = "## Available commands ##\n" \
-	   "  - /deals \n" \
-	   "       get all deals that respect the active settings\n" \
-	   "  - /settings \n" \
-	   "       review and change settings (see below)\n" \
-	   "  - /custom \n" \
-	   "       perform a query on your wishlist with temporary settings\n" \
-	   "  - /alldeals \n" \
-	   "       list every game in your wishlist currently on sale\n" \
-	   "  - /help \n" \
-	   "       show this help text\n" \
-	   "  - /start \n" \
-	   "       show start message\n" \
-	   "  - /update \n" \
-	   "       trigger an update of the local cache\n" \
-	   "  - /stats \n" \
-	   "       show some statistics on your account\n" \
-	   "\n\n" \
-	   "## Settings ##\n" \
-	   "The current deal list is filtered applying two thresholds:\n" \
-	   "  - 'Max Price': maximum price accepted\n" \
-	   "  - 'Min Discount': minimum discount percentage accepted\n" \
-	   "Deals are filtered excluding games that don't respect both the two thresholds, "\
-	   "for the ones that have an original price that is already below the price "\
-	   "threshold, the 'Low Price Discount' threshold is checked against discount percentage.\n" \
+           "  - /deals \n" \
+           "       get all deals that respect the active settings\n" \
+           "  - /settings \n" \
+           "       review and change settings (see below)\n" \
+           "  - /custom \n" \
+           "       perform a query on your wishlist with temporary settings\n" \
+           "  - /alldeals \n" \
+           "       list every game in your wishlist currently on sale\n" \
+           "  - /help \n" \
+           "       show this help text\n" \
+           "  - /start \n" \
+           "       show start message\n" \
+           "  - /update \n" \
+           "       trigger an update of the local cache\n" \
+           "  - /stats \n" \
+           "       show some statistics on your account\n" \
+           "\n\n" \
+           "## Settings ##\n" \
+           "The current deal list is filtered applying two thresholds:\n" \
+           "  - 'Max Price': maximum price accepted\n" \
+           "  - 'Min Discount': minimum discount percentage accepted\n" \
+           "Deals are filtered excluding games that don't respect both the two thresholds, " \
+           "for the ones that have an original price that is already below the price " \
+           "threshold, the 'Low Price Discount' threshold is checked against discount percentage.\n"
 
     bot.send_message(chat_id=update.message.chat_id, text=text)
+
 
 # #### CONVERSATIONS ####
 
@@ -160,9 +160,9 @@ def conv_start_start(bot, update, user_data):
                 "you can also ask me to list all your applicable /deals (or /alldeals regardless of your settings)," \
                 "perform custom queries on your wishlist deals with /custom command,  " \
                 "/update deals information, change /settings or show you some /stats. " \
-	        "I can provide you more info if you aske me for /help. " \
+                "I can provide you more info if you aske me for /help. " \
                 "(Remember that your steam wishlist must be public for me to read it!)" \
-		"\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist"
+                "\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist"
 
     user_data['ud'] = ud
     bot.send_message(chat_id=update.message.chat_id, text=text)
@@ -189,8 +189,8 @@ def conv_start_confirm(bot, update, user_data):
                "you can also ask me to list all your applicable /deals (or /alldeals regardless of your settings)," \
                "perform custom queries on your wishlist deals with /custom command,  " \
                "/update deals information, change /settings or show you some /stats. " \
-	       "I can provide you more info if you aske me for /help. " \
-	       "\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist".format(ud.username)
+                "I can provide you more info if you aske me for /help. " \
+                "\n\nI am an open source bot, find me on https://github.com/mellotanica/steam_deallist".format(ud.username)
         um = bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(),
                               text="Initializing cache..⏳")
         comm_update(bot, update, ud, False)
@@ -215,15 +215,19 @@ __settings_username = 0
 __settings_max_price = 1
 __settings_min_discount = 2
 __settings_low_price_discount = 3
+__settings_show_best_deals = 4
+__settings_humble_bundle_enabled = 5
+
 
 def conv_settings_default(bot, update, user_data, message = ""):
     ud = user_data['ud']
 
-    markup = [['Min Discount', 'Max Price'], ['Low Price Discount'], ['Username'], ['Done']]
+    markup = [['Min Discount', 'Max Price'], ['Low Price Discount', 'Show Best Deals'], ['Username'], ['Done']]
 
     message += "Steam Username: {}\nMin discount: {}%\nMax price: {}€\nMin discount for low price games: {}%\n" \
-               "What do you want to modify?".format(ud.username, ud.configs.min_discount, ud.configs.max_price,
-                                                    ud.configs.low_price_min_discount)
+        "Show all best deals: {}\n" \
+        "What do you want to modify?".format(ud.username, ud.configs.min_discount, ud.configs.max_price,
+            ud.configs.low_price_min_discount, ud.configs.show_best_deals)
     bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(markup), text=message)
 
     return 0
@@ -263,6 +267,14 @@ def conv_settings_set(bot, update, user_data):
     elif text in 'username':
         current_val = user_data['ud'].username
         user_data['current_param'] = __settings_username
+    elif text in 'show best deals':
+        current_val = user_data['ud'].configs.show_best_deals
+        user_data['current_param'] = __settings_show_best_deals
+        ret = 2
+    elif text in 'humble bundle enabled':
+        current_val = user_data['ud'].configs.humble_bundle_enabled
+        user_data['current_param'] = __settings_humble_bundle_enabled
+        ret = 2
     elif text in "done" or text in "cancel":
         user_data_manager.store_userdata(user_data['ud'])
         bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(),
@@ -274,7 +286,15 @@ def conv_settings_set(bot, update, user_data):
         ret = 0
 
     if current_val is None:
-        bot.send_message(chat_id=update.message.chat_id, text="Unknown choiche, what do you want to modify?")
+        bot.send_message(chat_id=update.message.chat_id, text="Unknown choice, what do you want to modify?")
+    elif ret == 2:
+        text = "Current value: "
+        if current_val:
+            text += "enabled"
+        else:
+            text += "disabled"
+        text += ", specify new value"
+        bot.send_message(chat_id=update.message.chat_id, text=text, reply_markup=ReplyKeyboardMarkup([["Enable"], ['Disable']]))
     else:
         bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardRemove(),
                          text="Current value: {}, specify new value".format(current_val))
@@ -311,6 +331,30 @@ def conv_settings_apply(bot, update, user_data):
         user_data['ud'].username = val
 
     return conv_settings_default(bot, update, user_data)
+
+
+def conv_settings_boolean(bot, update, user_data):
+    if update.message.text.lower() in "cancel":
+        user_data['current_param'] = None
+        return conv_settings_default(bot, update, user_data)
+
+    val = update.message.text.lower()
+    if val in 'enable':
+        val = True
+    elif val in 'disable':
+        val = False
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="Unknown value, specify new value")
+        return 2
+
+    param = user_data['current_param']
+    if param == __settings_show_best_deals:
+        user_data['ud'].configs.show_best_deals = val
+    elif param == __settings_humble_bundle_enabled:
+        user_data['ud'].configs.humble_bundle_enabled = val
+
+    return conv_settings_default(bot, update, user_data)
+
 
 
 # custom conversation
@@ -505,7 +549,8 @@ dispatcher.add_handler(
     ConversationHandler(entry_points=[CommandHandler("settings", conv_settings_start, pass_user_data=True)],
                         fallbacks=[CommandHandler("cancel", conv_cancel)], states={
             0: [MessageHandler(Filters.text, conv_settings_set, pass_user_data=True)],
-            1: [MessageHandler(Filters.text, conv_settings_apply, pass_user_data=True)]
+            1: [MessageHandler(Filters.text, conv_settings_apply, pass_user_data=True)],
+            2: [MessageHandler(Filters.text, conv_settings_boolean, pass_user_data=True)]
         }))
 
 dispatcher.add_handler(

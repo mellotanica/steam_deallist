@@ -19,30 +19,78 @@ from isthedeal_wrapper import Deal
 #   discount_price
 
 class UserConfigs:
-    def __init__(self, max_price, min_discount, low_price_min_discount):
-        self.max_price = max_price
-        self.min_discount = min_discount
-        self.low_price_min_discount = low_price_min_discount
+    MAX_PRICE_DEFAULT=5
+    MIN_DISCOUNT_DEFAULT=75
+    LOW_PRICE_DISCOUNT_DEFAULT=50
+    SHOW_BEST_DEALS_DEFAULT=True
+    HUMBLE_BUNDLE_ENABLED_DEFAULT=False
+
+    def __init__(self, max_price=None, min_discount=None, low_price_min_discount=None, show_best_deals=None, humble_bundle_enabled=None):
+        if max_price is not None:
+            self.max_price = max_price
+        else:
+            self.max_price = UserConfigs.MAX_PRICE_DEFAULT
+
+        if min_discount is not None:
+            self.min_discount = min_discount
+        else:
+            self.min_discount = UserConfigs.MIN_DISCOUNT_DEFAULT
+
+        if low_price_min_discount is not None:
+            self.low_price_min_discount = low_price_min_discount
+        else:
+            self.low_price_min_discount = UserConfigs.LOW_PRICE_DISCOUNT_DEFAULT
+
+        if show_best_deals is not None:
+            self.show_best_deals = show_best_deals
+        else:
+            self.show_best_deals = UserConfigs.SHOW_BEST_DEALS_DEFAULT
+
+        if humble_bundle_enabled is not None:
+            self.humble_bundle_enabled = humble_bundle_enabled
+        else:
+            self.humble_bundle_enabled = UserConfigs.HUMBLE_BUNDLE_ENABLED_DEFAULT
 
     def __str__(self):
-        return "Max game price: {}, Minimum discount: {}%, Minimum discount for low price games: {}%".format(
+        def print_bool(text, var):
+            ret = ", "+text+" "
+            if var:
+                ret += "enabled"
+            else:
+                ret += "disabled"
+            return ret
+
+        ret = "Max game price: {}, Minimum discount: {}%, Minimum discount for low price games: {}%".format(
             self.max_price, self.min_discount, self.low_price_min_discount
         )
+        ret += print_bool("show all best deals", self.show_best_deals)
+        ret += print_bool("humble bundle display", self.humble_bundle_enabled)
+
+        return ret
 
     @staticmethod
     def get_default():
-        return UserConfigs(5, 75, 50)
+        return UserConfigs()
 
     def to_dict(self):
         return {
             'max_price': self.max_price,
             'min_discount': self.min_discount,
-            'low_price_min_discount': self.low_price_min_discount
+            'low_price_min_discount': self.low_price_min_discount,
+            'show_best_deals': self.show_best_deals,
+            'humble_bundle_enabled': self.humble_bundle_enabled
         }
 
     @staticmethod
     def from_dict(ddata):
-        return UserConfigs(ddata['max_price'], ddata['min_discount'], ddata['low_price_min_discount'])
+        def get_field(fn, ddata):
+            if fn in ddata:
+                return ddata[fn]
+            else:
+                return None
+        return UserConfigs(get_field('max_price', ddata), get_field('min_discount', ddata),
+                           get_field('low_price_min_discount', ddata), get_field('show_best_deals', ddata),
+                           get_field('humble_bundle_enabled', ddata))
 
 
 class Exclude:

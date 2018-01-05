@@ -10,8 +10,10 @@ optional_vars = {
     'isthereanydeal_api_key': 'ISTHEREANYDEAL_API_KEY'
 }
 
+
 def __sanitize_price_string(price):
     return price.replace(",",".").replace("-", "0")
+
 
 def __is_game_applicable(g, max_price, low_price_discount, min_discount, exclude):
     if g.gid not in exclude:
@@ -61,7 +63,7 @@ def get_updated_user_cache(user_data):
 
 
 def get_discount_games(user_data, max_price=None, low_price_discount=None,
-                       min_discount=None, ignore_excludes=True, include_recommended=False):
+                       min_discount=None, ignore_excludes=True, include_recommended=None):
     if type(user_data) is not UserData:
         raise Exception("user_data must be a valid UserData object")
 
@@ -77,6 +79,9 @@ def get_discount_games(user_data, max_price=None, low_price_discount=None,
     exclude = user_data.get_exclude_map()
     if exclude is None or ignore_excludes:
         exclude = {}
+
+    if include_recommended is None:
+        include_recommended = user_data.configs.show_best_deals
 
     applicable_games = [g for g in user_data.cache if g.is_applicable(
         max_price, low_price_discount, min_discount, exclude, include_recommended)]
