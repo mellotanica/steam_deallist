@@ -134,9 +134,9 @@ class Game:
         if self.deal is not None:
             if self.is_recommended():
                 ret += "\n💰💸Best deal on the market, go buy it now!💸💰"
-            elif self.deal.current.price >= self.deal.historical.price:
-                ret += "\nLowest price: {}".format(self.deal.current)
-            elif self.deal.current.shop['id'] == 'steam':
+            elif self.price > self.deal.current.price:
+                ret += "\nCurrent lowest price: {}".format(self.deal.current)
+            elif self.price > self.deal.historical.price:
                 ret += "\nHistorical lowest price: {}".format(self.deal.historical)
             else:
                 ret += "\nLowest prices: current {}, all time {}".format(self.deal.current, self.deal.historical)
