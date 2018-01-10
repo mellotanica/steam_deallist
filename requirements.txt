@@ -2,3 +2,4 @@ beautifulsoup4
 python-telegram-bot
 lxml
 urllib3
+editdistance

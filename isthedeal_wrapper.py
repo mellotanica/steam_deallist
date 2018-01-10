@@ -51,17 +51,21 @@ class PriceDeal:
 
 
 class Deal:
-    def __init__(self, game_id, game_plain, current, historical, country):
+    def __init__(self, game_id, game_plain, current, historical, country, shop=None):
         self.game_id = game_id
         self.game_plain = game_plain
         self.current_j = current
         self.historical_j = historical
         self.country = country
         region = get_region_by_country(country)
+        self.current = None
         if 'list' in current.keys() and len(current['list']) > 0:
+            if shop is not None:
+                for d in current['list']:
+                    if d['shop']['id'] == shop:
+                        self.current = PriceDeal.from_deal(d, region)
+            if self.current is None:
                 self.current = PriceDeal.from_deal(current['list'][0], region)
-        else:
-                self.current = None
         self.historical = PriceDeal.from_deal(historical, region)
 
     def __str__(self):
@@ -171,6 +175,15 @@ def get_game_lowest_prices(api_key, game_id, shop='steam', country='IT'):
 
     return Deal(game_id, plain, cur_j[plain], hist_j[plain], country)
 
+
+def get_steam_price(api_key, game_id, country='IT'):
+    plain = get_game_plain_by_id(api_key, game_id, 'steam')
+    if plain is None:
+        return None
+
+    cur_j, hist_j = __get_lowest(api_key, plain, country)
+
+    return Deal(game_id, plain, cur_j[plain], hist_j[plain], country, 'steam')
 
 # returns a Deal list
 def get_multiple_games_lowest_prices(api_key, id_list, shop='steam', country='IT'):

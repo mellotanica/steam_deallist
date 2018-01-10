@@ -14,6 +14,7 @@ To run the bot or the scraper you will need Python3 (>= 3.4), also the following
 - [beautyfulsoup4](https://www.crummy.com/software/BeautifulSoup/)
 - [lxml](http://lxml.de/)
 - [python-telegram-bot](https://python-telegram-bot.org/)
+- [editdistance](https://github.com/aflc/editdistance)
 
 If you installed python-pip you can get the needed packages running
 `pip3 install -r requirements.txt`
