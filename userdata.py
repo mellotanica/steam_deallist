@@ -23,7 +23,7 @@ class UserConfigs:
     MIN_DISCOUNT_DEFAULT=75
     LOW_PRICE_DISCOUNT_DEFAULT=50
     SHOW_BEST_DEALS_DEFAULT=True
-    HUMBLE_BUNDLE_ENABLED_DEFAULT=False
+    HUMBLE_BUNDLE_ENABLED_DEFAULT=True
 
     def __init__(self, max_price=None, min_discount=None, low_price_min_discount=None, show_best_deals=None, humble_bundle_enabled=None):
         if max_price is not None:
@@ -128,20 +128,45 @@ class Game:
                     return True
         return False
 
-    def __str__(self):
-        ret = "{}".format(self.name)
-        ret += "\nprice: {}€ ({}€ - {}%)".format(self.price, self.original_price, self.cut)
-        if self.deal is not None:
-            if self.is_recommended():
-                ret += "\n💰💸Best deal on the market, go buy it now!💸💰"
-            elif self.price > self.deal.current.price:
-                ret += "\nCurrent lowest price: {}".format(self.deal.current)
-            elif self.price > self.deal.historical.price:
-                ret += "\nHistorical lowest price: {}".format(self.deal.historical)
-            else:
-                ret += "\nLowest prices: current {}, all time {}".format(self.deal.current, self.deal.historical)
-        ret += "\nStore page: {}".format(self.link)
+    def is_valid_steam_game(self):
+        return not ((self.gid is None or self.gid == '') and (self.link is None or self.link == '') and self.deal is None)
+
+    def to_string(self, htmlTags=False):
+        def link(text, href):
+            if htmlTags:
+                return '<a href="{}">{}</a>'.format(href, text)
+            return text
+
+        def bold(text):
+            if htmlTags:
+                return '<b>{}</b>'.format(text)
+            return text
+
+        def italic(text):
+            if htmlTags:
+                return '<i>{}</i>'.format(text)
+            return text
+
+        if self.is_valid_steam_game():
+            ret = link(self.name, self.link)
+            ret += "\nprice: " + bold("{}€".format(self.price))
+            ret += " ("+italic("{}€".format(self.original_price))+" - " + bold("{}%".format(self.cut)) +")"
+            if self.deal is not None:
+                if self.is_recommended():
+                    ret += "\n💰💸"+bold("Best deal on the market, go buy it now!")+"💸💰"
+                elif self.price > self.deal.current.price:
+                    ret += "\nCurrent lowest price: "+italic("{}".format(self.deal.current))
+                elif self.price > self.deal.historical.price:
+                    ret += "\nHistorical lowest price: "+italic("{}".format(self.deal.historical))
+                else:
+                    ret += "\nLowest prices: current"+italic(" {}, ".format(self.deal.current))
+                    ret += "all time "+italic("{}".format(self.deal.historical))
+        else:
+            ret = bold(self.name)
         return ret
+
+    def __str__(self):
+        return self.to_string(False)
 
     def is_applicable(self, max_price, low_price_discount, min_discount, exclude, include_recommended=False):
         if self.gid not in exclude.keys() or self.price != exclude[self.gid]:
@@ -250,12 +275,24 @@ class UserDataManager:
             raise Exception("Missing cache path")
         self.cache_path = cache_path
 
+    def get_userlist(self):
+        list = []
+        for f in os.scandir(self.cache_path):
+            if f.is_file():
+                try:
+                    tid = int(f.name)
+                except:
+                    tid = None
+                if tid is not None:
+                    list.append(tid)
+        return list
+
     # reads userdata, if user is unknown initializes a new userdata
     def get_userdata(self, tid):
         if type(tid) is not int:
             raise Exception("Telegram id needs to be a valid int, found type {}".format(type(tid)))
 
-        fpath = self.cache_path + "/" + str(tid)
+        fpath = os.path.join(self.cache_path, str(tid))
 
         if os.path.isfile(fpath):
             f = open(fpath, 'r')

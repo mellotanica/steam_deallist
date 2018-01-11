@@ -25,12 +25,17 @@ if not os.path.isdir(cache_dir):
     logging.critical("{} is not a valid directory\nplease run bot using start_bot.sh")
     exit(2)
 
+bundle_cache_file = os.path.join(cache_dir, "bundles_cache")
+tid_cache_dir = os.path.join(cache_dir, "tids")
+if not os.path.isdir(tid_cache_dir):
+    os.mkdir(tid_cache_dir)
 
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
-from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, TelegramError
+from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, TelegramError, ParseMode
 import steam_deallist
 import datetime
 from userdata import UserDataManager
+from humblebundle import BundleCache
 
 # #### MISC ####
 
@@ -39,8 +44,16 @@ def send_deals(bot, tid, games):
         bot.send_message(chat_id=tid, text="No deals available right now")
     else:
         for g in games:
-            bot.send_message(chat_id=tid, text=str(g))
+            bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text=g.to_string(True))
 
+
+def send_bundles(bot, tid, bundles):
+    for bundle in bundles:
+        bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text='<b>VVV</b> <a href="{}">{}</a> <b>VVV</b>'.format(bundle.url, bundle.name))
+        for grp in bundle.gameGroups.keys():
+            bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text='<i>{}</i>'.format(grp))
+            send_deals(bot, tid, bundle.gameGroups[grp])
+        bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text="<b>ΛΛΛ {} ΛΛΛ</b>".format(bundle.name))
 
 # #### COMMANDS ####
 
@@ -104,6 +117,18 @@ def comm_all_deals(bot, update):
     send_deals(bot, update.message.chat_id, user_data.cache)
 
 
+def comm_bundles(bot, update):
+    global bundles_cache
+    global user_data_manager
+
+    user_data = user_data_manager.get_userdata(update.message.chat_id)
+
+    if user_data is None:
+        bot.send_message(chat_id=update.message.chat_id, text="Account not configured! Please, issue /start command")
+        return
+
+    send_bundles(bot, update.message.chat_id, bundles_cache.cache)
+
 def comm_help(bot, update):
     global user_data_manager
     user_data = user_data_manager.get_userdata(update.message.chat_id)
@@ -115,6 +140,8 @@ def comm_help(bot, update):
     text = "## Available commands ##\n" \
            "  - /deals \n" \
            "       get all deals that respect the active settings\n" \
+           "  - /bundles \n" \
+           "       get all active game bundles from HumbleBundle\n" \
            "  - /settings \n" \
            "       review and change settings (see below)\n" \
            "  - /custom \n" \
@@ -222,12 +249,12 @@ __settings_humble_bundle_enabled = 5
 def conv_settings_default(bot, update, user_data, message = ""):
     ud = user_data['ud']
 
-    markup = [['Min Discount', 'Max Price'], ['Low Price Discount', 'Show Best Deals'], ['Username'], ['Done']]
+    markup = [['Min Discount', 'Max Price'], ['Low Price Discount', 'Show Best Deals'], ['Username', 'HumbleBundle Notifications'], ['Done']]
 
     message += "Steam Username: {}\nMin discount: {}%\nMax price: {}€\nMin discount for low price games: {}%\n" \
-        "Show all best deals: {}\n" \
+        "Show all best deals: {}\nHumbleBundle notifications: {}" \
         "What do you want to modify?".format(ud.username, ud.configs.min_discount, ud.configs.max_price,
-            ud.configs.low_price_min_discount, ud.configs.show_best_deals)
+            ud.configs.low_price_min_discount, ud.configs.show_best_deals, ud.configs.humble_bundle_enabled)
     bot.send_message(chat_id=update.message.chat_id, reply_markup=ReplyKeyboardMarkup(markup), text=message)
 
     return 0
@@ -271,7 +298,7 @@ def conv_settings_set(bot, update, user_data):
         current_val = user_data['ud'].configs.show_best_deals
         user_data['current_param'] = __settings_show_best_deals
         ret = 2
-    elif text in 'humble bundle enabled':
+    elif text in 'humblebundle notifications':
         current_val = user_data['ud'].configs.humble_bundle_enabled
         user_data['current_param'] = __settings_humble_bundle_enabled
         ret = 2
@@ -484,36 +511,55 @@ def conv_cancel(bot, update):
 # #### JOBS ####
 
 def job_deals(bot, job):
-    global cache_dir, user_data_manager
+    global user_data_manager
 
     logging.info("updating local caches")
 
-    for f in os.scandir(cache_dir):
-        if f.is_file():
-            try:
-                tid = int(f.name)
-            except:
-                tid = None
-            if tid is not None:
-                ud = user_data_manager.get_userdata(tid)
-                if ud is not None:
-                    logging.info("updating cache for tid {}, user {}".format(ud.tid, ud.username))
+    for tid in user_data_manager.get_userlist():
+        ud = user_data_manager.get_userdata(tid)
+        if ud is not None:
+            logging.info("updating cache for tid {}, user {}".format(ud.tid, ud.username))
 
-                    ud.cache = steam_deallist.get_updated_user_cache(ud)
+            ud.cache = steam_deallist.get_updated_user_cache(ud)
 
-                    games = steam_deallist.get_discount_games(ud, ignore_excludes=False)
-                    if len(games) > 0:
-                        send_deals(bot, ud.tid, games)
+            games = steam_deallist.get_discount_games(ud, ignore_excludes=False)
+            if len(games) > 0:
+                send_deals(bot, ud.tid, games)
 
-                    ud.set_exclude_cache()
-                    user_data_manager.store_userdata(ud)
+            ud.set_exclude_cache()
+            user_data_manager.store_userdata(ud)
 
     logging.info("daily update done")
 
 
+def job_bundles(bot, job):
+    global bundle_cache_file, bundles_cache, user_data_manager
+
+    if bundles_cache is None or bundles_cache.is_outdated():
+        logging.info("updating bundles cache")
+
+        if bundles_cache is None:
+            bundles_cache = BundleCache(bundle_cache_file, os.environ[steam_deallist.optional_vars['isthereanydeal_api_key']])
+        else:
+            bundles_cache.update()
+
+        notified = []
+        for bundle in bundles_cache.get_new_bundles():
+            notified.append(bundle)
+
+        for tid in user_data_manager.get_userlist():
+            ud = user_data_manager.get_userdata(tid)
+            if ud is not None and ud.configs.humble_bundle_enabled:
+                send_bundles(bot, tid, notified)
+
+        bundles_cache.notified_bundles(notified)
+
+        logging.info("bundles cache updated")
+
 # #### BOT INITIALIZATION ####
 
-user_data_manager = UserDataManager(cache_dir)
+user_data_manager = UserDataManager(tid_cache_dir)
+bundles_cache = None
 
 telegram_token = os.environ[env_vars['telegram_token']]
 update_h = int(os.environ[env_vars['update_h']])
@@ -533,6 +579,7 @@ dispatcher = updater.dispatcher
 # register telegram callbacks
 
 dispatcher.add_handler(CommandHandler("deals", comm_deals))
+dispatcher.add_handler(CommandHandler("bundles", comm_bundles))
 dispatcher.add_handler(CommandHandler("stats", comm_stats))
 dispatcher.add_handler(CommandHandler("update", comm_update))
 dispatcher.add_handler(CommandHandler("alldeals", comm_all_deals))
@@ -565,9 +612,13 @@ dispatcher.add_handler(
 
 if update_time is not None:
     updater.job_queue.run_daily(job_deals, update_time)
+    updater.job_queue.run_daily(job_bundles, update_time)
 
 if update_time is not None:
     logging.info("will send updates each day at {}".format(update_time))
+
+# init bundles cache in background
+updater.job_queue.run_once(job_bundles, datetime.datetime.now())
 
 # #### RUN BOT ####
 
