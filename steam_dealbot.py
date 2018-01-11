@@ -40,20 +40,26 @@ from humblebundle import BundleCache
 # #### MISC ####
 
 def send_deals(bot, tid, games):
-    if games is None or len(games) <= 0:
-        bot.send_message(chat_id=tid, text="No deals available right now")
-    else:
-        for g in games:
-            bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text=g.to_string(True))
+    try:
+        if games is None or len(games) <= 0:
+            bot.send_message(chat_id=tid, text="No deals available right now")
+        else:
+            for g in games:
+                bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text=g.to_string(True))
+    except TelegramError as e:
+        logging.error("error %s\nwhile sending games to %s", e, tid)
 
 
 def send_bundles(bot, tid, bundles):
-    for bundle in bundles:
-        bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text='<b>VVV</b> <a href="{}">{}</a> <b>VVV</b>'.format(bundle.url, bundle.name))
-        for grp in bundle.gameGroups.keys():
-            bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text='<i>{}</i>'.format(grp))
-            send_deals(bot, tid, bundle.gameGroups[grp])
-        bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text="<b>ΛΛΛ {} ΛΛΛ</b>".format(bundle.name))
+    try:
+        for bundle in bundles:
+            bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text='<b>VVV</b> <a href="{}">{}</a> <b>VVV</b>'.format(bundle.url, bundle.name))
+            for grp in bundle.gameGroups.keys():
+                bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text='<i>{}</i>'.format(grp))
+                send_deals(bot, tid, bundle.gameGroups[grp])
+            bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text="<b>ΛΛΛ {} ΛΛΛ</b>".format(bundle.name))
+    except TelegramError as e:
+        logging.error("error %s\nwhile sending bundles to %s", e, tid)
 
 # #### COMMANDS ####
 
