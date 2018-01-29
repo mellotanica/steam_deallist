@@ -3,8 +3,11 @@
 import os
 from bs4 import BeautifulSoup
 import urllib.request
+import urllib.parse
 from isthedeal_wrapper import get_multiple_games_lowest_prices
 from userdata import UserData, Game
+import re
+import editdistance
 
 optional_vars = {
     'isthereanydeal_api_key': 'ISTHEREANYDEAL_API_KEY'
@@ -87,6 +90,36 @@ def get_discount_games(user_data, max_price=None, low_price_discount=None,
         max_price, low_price_discount, min_discount, exclude, include_recommended)]
 
     return applicable_games
+
+
+__clean_spaces = re.compile(r"\s+")
+
+def query_steam_for_game(name):
+    global __clean_spaces
+    name = __clean_spaces.sub(" ", name)
+    if name.endswith(" Standard Edition"):
+        name = name[:-len(" Standard Edition")]
+    url = "http://store.steampowered.com/search/?term=" + urllib.parse.quote(name, safe='')
+    soup = BeautifulSoup(urllib.request.urlopen(url), "lxml")
+    minedit = None
+    link = None
+
+    for a in soup.find("div", id="search_result_container").findAll("a"):
+        gref = a.find("div", "col search_name ellipsis")
+        if gref is not None:
+            clink = a.get('href')
+            game_name = __clean_spaces.sub(" ", gref.span.text)
+            distance = editdistance.eval(name, game_name)
+            if minedit is None or distance < minedit:
+                link = clink
+                minedit = distance
+            if distance == 0:
+                break
+
+    if link is not None and minedit < 4:
+        link_frags = urllib.parse.urlsplit(link).path.split("/")
+        return "/".join(link_frags[1:3]), link
+    return None, None
 
 
 def print_game_list(games):
