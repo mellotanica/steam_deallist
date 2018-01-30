@@ -92,6 +92,10 @@ def get_discount_games(user_data, max_price=None, low_price_discount=None,
     return applicable_games
 
 
+def get_id_from_store_url(link):
+    link_frags = urllib.parse.urlsplit(link).path.split("/")
+    return "/".join(link_frags[1:3])
+
 __clean_spaces = re.compile(r"\s+")
 
 def query_steam_for_game(name):
@@ -117,8 +121,7 @@ def query_steam_for_game(name):
                 break
 
     if link is not None and minedit < 4:
-        link_frags = urllib.parse.urlsplit(link).path.split("/")
-        return "/".join(link_frags[1:3]), link
+        return get_id_from_store_url(link), link
     return None, None
 
 
