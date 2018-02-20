@@ -1,4 +1,4 @@
 .idea
 __pycache__
-tags_sh
-tags_py
+tags_*
+venv

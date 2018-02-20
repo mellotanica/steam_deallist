@@ -8,6 +8,7 @@ from isthedeal_wrapper import get_multiple_games_lowest_prices
 from userdata import UserData, Game
 import re
 import editdistance
+import json
 
 optional_vars = {
     'isthereanydeal_api_key': 'ISTHEREANYDEAL_API_KEY'
@@ -37,19 +38,45 @@ def get_updated_user_cache(user_data):
 
     url = "http://steamcommunity.com/id/{}/wishlist".format(user_data.username)
     soup = BeautifulSoup(urllib.request.urlopen(url), "lxml")
-    wish_games = soup.findAll("div", "wishlistRowItem")
+
+    data = None
+    second_url = None
+    for s in soup.findAll("script"):
+        if 'var g_rgAppInfo' in s.text:
+            for l in s.text.splitlines():
+                if 'var g_rgAppInfo' in l:
+                    start = min(l.index("{"), l.index("["))
+                    end = max(l.rindex("}"), l.rindex("]")) + 1
+                    data = json.loads(l[start:end])
+                elif 'var g_strWishlistBaseURL' in l:
+                    second_url = l[l.index('"')+1:l.rindex('"')].replace("\\/", "/") + "wishlistdata"
+                if data is not None and second_url is not None:
+                    break
+            break
+
+    if second_url is not None:
+        req = urllib.request.urlopen(second_url)
+        data.update(json.loads(req.read().decode(req.info().get_content_charset('utf-8'))))
 
     discount_games = {}
 
-    for game in wish_games:
-        if game.find("div", "discount_final_price") is not None:
-            original_price = float(__sanitize_price_string(game.find("div", "discount_original_price").text[:-1]))
-            final_price = float(__sanitize_price_string(game.find("div", "discount_final_price").text[:-1]))
-            cut = int(float(__sanitize_price_string(game.find("div", "discount_pct").text[1:-1])))
-            name = game.find("h4", "ellipsis").text
-            link = game.find("a", "storepage_btn_alt")['href']
-            tokens = link.split('/')
-            gameid = "/".join(tokens[-2:])
+    for game in data.values():
+        sub = None
+        prc = None
+        for s in game["subs"]:
+            if s["discount_pct"] > 0 and (prc is None or s["price"]):
+                sub = s
+                prc = s["price"]
+
+        if sub is not None:
+            db = BeautifulSoup(sub["discount_block"], "lxml")
+            original_price = float(__sanitize_price_string(db.find("div", "discount_original_price").text[:-1]))
+            final_price = float(__sanitize_price_string(db.find("div", "discount_final_price").text[:-1]))
+            cut = int(float(__sanitize_price_string(db.find("div", "discount_pct").text[1:-1])))
+            name = game["name"]
+            tokens = game["capsule"].split('/')
+            gameid = "app/"+tokens[-2]
+            link = "http://store.steampowered.com/" + gameid
             discount_games[gameid] = (Game(gameid, original_price, final_price, cut, link, name, None))
 
     if optional_vars['isthereanydeal_api_key'] in os.environ:
