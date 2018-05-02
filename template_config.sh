@@ -8,3 +8,4 @@ export STEAM_UPDATES_MINUTE=XX
 # isthereanydeal api key (optional), get one here: https://isthereanydeal.com/apps/new/
 export ISTHEREANYDEAL_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+export NOTIFICATION_FILE="$HOME/steam_notification"

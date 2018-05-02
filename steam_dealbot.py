@@ -3,7 +3,8 @@
 env_vars = {
     'telegram_token': "STEAM_TELEGRAM_API_KEY",
     'update_h': "STEAM_UPDATES_HOUR",
-    'update_m': "STEAM_UPDATES_MINUTE"
+    'update_m': "STEAM_UPDATES_MINUTE",
+    'notification_file': "NOTIFICATION_FILE"
 }
 
 import sys
@@ -562,6 +563,22 @@ def job_bundles(bot, job):
 
         logging.info("bundles cache updated")
 
+def job_sporadic_notify(bot, job):
+    global user_data_manager, env_vars
+
+    if env_vars['notification_file'] in os.environ:
+        if os.path.exists(os.environ[env_vars['notification_file']]):
+            logging.info("found notification file")
+            f = open(os.environ[env_vars['notification_file']], 'r')
+            content = f.read()
+            f.close()
+            os.rename(os.environ[env_vars['notification_file']], os.environ[env_vars['notification_file']]+"_done")
+            if content is not None and len(content) > 0:
+                logging.info("notifying message:\n{}".format(content))
+                for tid in user_data_manager.get_userlist():
+                    bot.send_message(chat_id=tid, parse_mode=ParseMode.HTML, text=content)
+
+
 # #### BOT INITIALIZATION ####
 
 user_data_manager = UserDataManager(tid_cache_dir)
@@ -619,12 +636,16 @@ dispatcher.add_handler(
 if update_time is not None:
     updater.job_queue.run_daily(job_deals, update_time)
     updater.job_queue.run_daily(job_bundles, update_time)
+    updater.job_queue.run_daily(job_sporadic_notify, update_time)
 
 if update_time is not None:
     logging.info("will send updates each day at {}".format(update_time))
 
 # init bundles cache in background
 updater.job_queue.run_once(job_bundles, datetime.datetime.now())
+
+# program notifications send if needed
+updater.job_queue.run_once(job_sporadic_notify, datetime.datetime.now()+datetime.timedelta(minutes=1))
 
 # #### RUN BOT ####
 
